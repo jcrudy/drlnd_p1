@@ -3,10 +3,11 @@ from six.moves import reduce  # @UnresolvedImport
 
 class Network(nn.Module):
     def __init__(self, state_size, n_actions, layers, activations):
+        super().__init__()
         self.state_size = state_size
         self.n_actions = n_actions
-        self.layers = layers
-        self.activations = activations
+        self.layers = nn.ModuleList(layers)
+        self.activations = tuple(activations)
     
     @staticmethod
     def _step(state, layer_and_activation):

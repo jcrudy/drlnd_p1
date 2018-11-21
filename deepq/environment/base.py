@@ -1,9 +1,10 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
+from six import with_metaclass
 
 class ClosedEnvironmentError(Exception):
     pass
 
-class Environment(object):
+class Environment(with_metaclass(ABCMeta, object)):
     @property
     def state_size(self):
         return self._state_size
@@ -30,5 +31,5 @@ class Environment(object):
         Close the environment.
         '''
     
-    def __del__(self):
-        self.close()
+#     def __del__(self):
+#         self.close()

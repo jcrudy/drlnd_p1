@@ -1,9 +1,10 @@
 from collections import deque
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
+from six import with_metaclass
 
-class ReplayBuffer(object):
-    def __init__(self, action_size, buffer_size):
-        self.action_size = action_size
+class ReplayBuffer(with_metaclass(ABCMeta, object)):
+    def __init__(self, n_actions, buffer_size):
+        self.n_actions = n_actions
         self.buffer_size = buffer_size
         self.buffer = deque(maxlen=self.buffer_size)
     

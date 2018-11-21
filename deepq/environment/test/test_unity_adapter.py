@@ -1,4 +1,4 @@
-from drlnd_p1.environment.unity_adapter import BananaEnvironment
+from deepq.environment.unity_adapter import BananaEnvironment
 import numpy as np
 from nose.tools import assert_equal, assert_is_instance  # @UnresolvedImport
 
@@ -14,7 +14,7 @@ def test_banana_environment():
     env.close()
     
 if __name__ == '__main__':
-    # Run the tests in this file.'
+    # Run the tests in this file.
     import sys
     import nose
     module_name = sys.modules[__name__].__file__

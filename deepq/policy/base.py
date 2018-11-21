@@ -1,6 +1,7 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
+from six import with_metaclass
 
-class Policy(object):
+class Policy(with_metaclass(ABCMeta, object)):
     @abstractmethod
     def choose(self, values):
         '''

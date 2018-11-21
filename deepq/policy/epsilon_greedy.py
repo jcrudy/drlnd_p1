@@ -13,9 +13,11 @@ class EpsilonGreedyPolicy(Policy):
     
     def choose(self, values):
         if np.random.random() < self.epsilon:
-            return np.random.choice(len(values))
+            result = np.random.choice(len(values))
         else:
-            return np.random.choice(np.max(values) == values)
+            result = np.random.choice(np.where(np.max(values) == values)[0])
         
         # Update epsilon
         self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
+        
+        return result

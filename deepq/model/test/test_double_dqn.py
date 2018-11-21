@@ -3,9 +3,9 @@ import torch.nn as nn
 from toolz import identity
 from deepq.network.base import Network
 import numpy as np
-from deepq.model.fixed_q_target import FixedQTargetModel
+from deepq.model.double_dqn import DoubleDQNModel
 
-def test_fixed_q_target_network():
+def test_double_dqn():
     # TODO: Make test data more meaningful and add some assertions.
     
     np.random.seed(0)
@@ -13,7 +13,7 @@ def test_fixed_q_target_network():
     layers = (nn.Linear(10, 10), nn.Linear(10, 10), nn.Linear(10, 5))
     activations = (F.relu, F.relu, identity)
     net = Network(10, 5, layers, activations)
-    model = FixedQTargetModel(net)
+    model = DoubleDQNModel(net)
     state = np.random.normal(size=(100, 10))
     action = np.random.randint(5, size=100)
     reward = np.random.normal(size=100)

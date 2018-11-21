@@ -3,8 +3,7 @@ from abc import abstractmethod, ABCMeta
 from six import with_metaclass
 
 class ReplayBuffer(with_metaclass(ABCMeta, object)):
-    def __init__(self, n_actions, buffer_size):
-        self.n_actions = n_actions
+    def __init__(self, buffer_size):
         self.buffer_size = buffer_size
         self.buffer = deque(maxlen=self.buffer_size)
     

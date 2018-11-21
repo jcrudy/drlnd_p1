@@ -57,8 +57,8 @@ class Agent(object):
         x = x[idx]
         y = y[idx]
         df = pandas.DataFrame(dict(x=x, y=y))
-        df = df.groupby('x').aggregate([np.mean, np.std])
-        plt.errorbar(df.index, df[('y', 'mean')], yerr=2 * df[('y', 'std')], 
+        df = df.groupby('x').aggregate([np.mean, np.std, len])
+        plt.errorbar(df.index, df[('y', 'mean')], yerr=2 * df[('y', 'std')] / np.sqrt(df[('y', 'len')]), 
                      fmt='r.', ecolor='r', label='Test Scores', zorder=10)
         
     def learn(self):
@@ -66,7 +66,7 @@ class Agent(object):
         sample = self.replay_buffer[sample_indices]
         state, action, reward, next_state, done = map(np.array, zip(*sample))
         self.model.learn(state, action, reward, next_state, done, sample_probs)
-    
+        
     def train(self, environment, num_episodes=inf, validate_every=None, validation_size=10,
               save_every=None, save_path=None):
         '''

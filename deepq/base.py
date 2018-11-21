@@ -15,6 +15,8 @@ def torchify_numpy(arr):
     return torch.from_numpy(arr)
 
 def torchify32(x):
+    # TODO: This could obviously be more efficient.  It 
+    # also might be good for it to handle integers differently.
     return torchify(numpify(x).astype(np.float32))
 
 numpify = Dispatcher('numpify')
@@ -33,7 +35,12 @@ def rolling_mean(y, window):
               np.convolve(np.ones_like(y), np.ones(shape=window), mode='full')
               )
     return result[:(1-window)]
-    
+
+def weighted_choice(sample_size, weights):
+    accum = np.cumsum(weights)
+    choice_values = np.random.uniform(high=accum[-1], size=sample_size)
+    return np.searchsorted(accum, choice_values)
+
 
 # def rolling_mean(x, y, window) :
 #     result = np.cumsum(y, dtype=float)

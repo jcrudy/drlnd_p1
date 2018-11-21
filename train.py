@@ -2,6 +2,7 @@ from deepq.environment.unity_adapter import BananaEnvironment
 from deepq.model.fixed_q_target import FixedQTargetModel
 from deepq.agent import Agent
 from deepq.buffer.uniform_sampling import UniformSamplingReplayBuffer
+from deepq.buffer.prioritized_replay import PrioritizedReplayBuffer
 from deepq.policy.epsilon_greedy import EpsilonGreedyPolicy
 from deepq.network.base import Network
 import torch.nn as nn
@@ -33,8 +34,8 @@ def main(args):
                                   nn.Linear(hidden_size, environment.n_actions)),
                           activations=(F.relu, F.relu, identity))
         model = FixedQTargetModel(network)
-        buffer = UniformSamplingReplayBuffer(environment.n_actions, buffer_size)
-        training_policy = EpsilonGreedyPolicy(1., .999, .05)
+        buffer = PrioritizedReplayBuffer(buffer_size)
+        training_policy = EpsilonGreedyPolicy(1., .995, .05)
         agent = Agent(model=model, replay_buffer=buffer, 
                   training_policy=training_policy)
     

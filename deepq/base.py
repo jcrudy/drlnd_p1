@@ -41,6 +41,10 @@ def weighted_choice(sample_size, weights):
     choice_values = np.random.uniform(high=accum[-1], size=sample_size)
     return np.searchsorted(accum, choice_values)
 
+def constant(value):
+    def _constant(*args, **kwargs):
+        return value
+    return _constant
 
 # def rolling_mean(x, y, window) :
 #     result = np.cumsum(y, dtype=float)

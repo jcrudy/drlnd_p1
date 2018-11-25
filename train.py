@@ -1,6 +1,6 @@
 from deepq.environment.unity_adapter import BananaEnvironment
 from deepq.model.fixed_q_target import FixedQTargetModel
-from deepq.agent import Agent
+from deepq.agent import Agent, AverageReturnThreshold
 from deepq.buffer.uniform_sampling import UniformSamplingReplayBuffer
 from deepq.buffer.prioritized_replay import PrioritizedReplayBuffer
 from deepq.policy.epsilon_greedy import EpsilonGreedyPolicy
@@ -8,6 +8,9 @@ from deepq.network.base import Network
 import torch.nn as nn
 import torch.nn.functional as F
 from toolz import identity
+from toolz.functoolz import compose
+from torch import optim
+from functools import partial
 
 def main(args):
     # Get command line arguments
@@ -26,23 +29,36 @@ def main(args):
         agent = Agent.from_pickle(model_path)
     except FileNotFoundError:
         hidden_size = 100
-        buffer_size = 100
+        buffer_size = 10000
         network = Network(state_size=environment.state_size, 
                           n_actions=environment.n_actions,
                           layers=(nn.Linear(environment.state_size, hidden_size),
                                   nn.Linear(hidden_size, hidden_size),
                                   nn.Linear(hidden_size, environment.n_actions)),
-                          activations=(F.relu, F.relu, identity))
-        model = FixedQTargetModel(network)
-        buffer = PrioritizedReplayBuffer(buffer_size)
-        training_policy = EpsilonGreedyPolicy(1., .995, .05)
+                          activations=(compose(nn.Dropout(.2), F.relu), 
+                                       compose(nn.Dropout(.2), F.relu), 
+                                       identity))
+        model = FixedQTargetModel(network, 
+                                  optimizerer=optim.Adam,
+                                  schedulerer=partial(optim.lr_scheduler.ReduceLROnPlateau, 
+                                                      mode='max',
+                                                      patience=20,
+                                                      verbose=True,
+                                                      ),
+                                  tau=1.)
+        buffer = UniformSamplingReplayBuffer(buffer_size)
+#         buffer = PrioritizedReplayBuffer(buffer_size)
+        training_policy = EpsilonGreedyPolicy(1., .995, .01)
         agent = Agent(model=model, replay_buffer=buffer, 
-                  training_policy=training_policy)
+                  training_policy=training_policy,
+                  batch_size=128)
     
     # Train the agent
     agent.train(environment, num_episodes, validate_every=validate_every,
                 validation_size=validation_episodes, save_every=save_every,
-                save_path=save_filename)
+                save_path=save_filename, 
+                early_stopper=AverageReturnThreshold(threshold=13., episodes=100),
+                plot=True)
     
     # Save trained agent to disk
     agent.to_pickle(model_path)
@@ -58,7 +74,7 @@ if __name__ == '__main__':
                         default=1000)
     parser.add_argument('-v', metavar='<validate_every>', 
                         help='The number of episodes between validations.',
-                        default=100, type=int)
+                        default=None, type=int)
     parser.add_argument('-e', metavar='<validation_episodes>',
                         help='The number of episodes for which to validate during each validation',
                         default=100, type=int)

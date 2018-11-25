@@ -4,7 +4,9 @@ import torch.nn.functional as F
 from copy import deepcopy
 from functools import partial
 import torch.optim as optim
-from ..base import torchify, torchify32, numpify
+from ..base import torchify, torchify32, numpify, constant
+from toolz import last
+import numpy as np
 
 class Model(with_metaclass(ABCMeta, object)):
     @abstractmethod
@@ -41,14 +43,25 @@ class Model(with_metaclass(ABCMeta, object)):
         
         error (ndarray, dtype=float, shape=n): The error for each learning experience.
         '''
+    
+    @abstractmethod
+    def register_progress(self, agent):
+        '''
+        Inform the model about progress by the agent.  Should be called by the agent
+        after each call to learn.  Allows the model to adjust learning parameters.
+        '''
 
 class DoubleNetworkModel(Model):
-    def __init__(self, network, optimizerer=partial(optim.Adam, lr=5e-4), gamma=.9, tau=1.):
+    def __init__(self, network, optimizerer=partial(optim.Adam, lr=5e-4), 
+                 schedulerer=partial(optim.lr_scheduler.LambdaLR, lr_lambda=constant(1.)), 
+                 gamma=.9, tau=1., window=100):
         self.q_local = network
         self.q_target = deepcopy(self.q_local)
         self.optimizer = optimizerer(self.q_local.parameters())
+        self.scheduler = schedulerer(self.optimizer)
         self.gamma = gamma
         self.tau = tau
+        self.window = window
     
     def evaluate(self, state):
         return self.q_local.forward(torchify32(state))
@@ -75,3 +88,10 @@ class DoubleNetworkModel(Model):
         self.soft_update(self.q_local, self.q_target, self.tau)
         
         return numpify((target - prediction).squeeze())
+    
+    def register_progress(self, agent):
+        if len(agent.train_scores) > self.window:
+            average_reward = np.mean(list(map(last, agent.train_scores[-self.window:])))
+            self.scheduler.step(average_reward)
+        
+        

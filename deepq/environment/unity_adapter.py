@@ -2,6 +2,7 @@ from .base import Environment, ClosedEnvironmentError
 from unityagents import UnityEnvironment
 from abc import abstractclassmethod
 from . import resources
+import os
 
 class UnityBasedEnvironment(Environment):
     @abstractclassmethod
@@ -12,7 +13,8 @@ class UnityBasedEnvironment(Environment):
         '''
 
     def __init__(self, graphics=False):
-        self.env = UnityEnvironment(file_name=self.path, no_graphics=(not graphics))
+        self.env = UnityEnvironment(file_name=self.path, no_graphics=(not graphics),
+                                    worker_id=os.getpid())
         self.brain_name = self.env.brain_names[0]
         self.brain = self.env.brains[self.brain_name]
         env_info = self.env.reset(train_mode=True)[self.brain_name]

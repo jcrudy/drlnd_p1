@@ -4,7 +4,7 @@ from toolz import first
 from ..base import weighted_choice
 
 class PrioritizedReplayBuffer(ReplayBuffer):
-    def __init__(self, buffer_size, e=.01, a=1., b_start=.1, log_b_decay=.99):
+    def __init__(self, buffer_size, e=1., a=1., b_start=.5, log_b_decay=.99):
         super().__init__(buffer_size)
         self.e = e
         self.a = a
@@ -17,6 +17,9 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         self.logb = np.log(self.b_start)
         self.max_weight = self.e ** self.a
         self.total_weight = 0.
+    
+    def register_progress(self, agent):
+        self.decay_b()
     
     @property
     def b(self):
@@ -31,12 +34,12 @@ class PrioritizedReplayBuffer(ReplayBuffer):
     def sample_indices(self, sample_size):
         weights = (self.weights() / self.total_weight)
         sample = weighted_choice(sample_size, weights)
-        return sample, (1. / (len(self) * weights[sample])) ** self.b
+        return sample, (1. / weights[sample]) ** (self.b)
     
     def report_errors(self, indices, errors):
-        for index in indices:
+        for i, index in enumerate(indices):
             old_weight = self.buffer[index][0]
-            new_weight =  (np.abs(errors[index]) + self.e) ** self.a
+            new_weight =  (np.abs(errors[i]) + self.e) ** self.a
             self.buffer[index][0] = new_weight
             self.total_weight += new_weight - old_weight
             if new_weight > self.max_weight:

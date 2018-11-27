@@ -52,6 +52,34 @@ class Model(with_metaclass(ABCMeta, object)):
         '''
 
 class DoubleNetworkModel(Model):
+    '''
+    A model that uses two networks with the same architecture, one of which lags 
+    the other in training to produce a more stable learning algorithm.
+    
+    
+    Parameters
+    ==========
+    
+    network (deepq.network.base.Network): A feed-forward network that will approximate the
+        state-action value function.
+        
+    optimizerer (callable): A callable that accepts the network parameters and returns a
+        torch.optim.Optimizer.
+        
+    schedulerer (callable): A callable that accepts an Optimizer and returns a torch LR 
+        scheduler.
+        
+    gamma (float, [0,1]): The discount factor for calculating discounted return.
+    
+    tau (float, (0,1]): The soft update factor used to bring the target network up to date 
+        with the local network.
+    
+    window (int, >0): The number of episodes to average when updating the learning rate 
+        scheduler.  For example, if window=100 then the scheduler will receive the 
+        average reward over the last 100 episodes during each call to register_progress.
+    
+    '''
+    
     def __init__(self, network, optimizerer=partial(optim.Adam, lr=5e-4), 
                  schedulerer=partial(optim.lr_scheduler.LambdaLR, lr_lambda=constant(1.)), 
                  gamma=.9, tau=1., window=100):
@@ -75,19 +103,27 @@ class DoubleNetworkModel(Model):
         pass
     
     def learn(self, state, action, reward, next_state, done, weight):
+        # Calculate target and prediction
         target = self.target(reward, next_state, done)
         prediction = self.q_local.forward(torchify32(state)).gather(1, torchify(action).unsqueeze(1))
         
+        # Compute the weighted loss
         weight_ = torchify32(weight).unsqueeze(1)
         loss = F.mse_loss(weight_ * prediction, weight_ * target)
         
+        # Perform an optimizer step
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         
+        # Update the target nework toward the local network
         self.soft_update(self.q_local, self.q_target, self.tau)
         
-        return numpify((target - prediction).squeeze())
+        # A second prediction after the model parameters have been adjusted
+        # in order to make better decisions about future sampling.
+        after_prediction = self.q_local.forward(torchify32(state)).detach().gather(1, torchify(action).unsqueeze(1))
+        
+        return numpify((target - after_prediction).squeeze())
     
     def register_progress(self, agent):
         if len(agent.train_scores) > self.window:

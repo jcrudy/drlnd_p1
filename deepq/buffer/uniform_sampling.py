@@ -7,6 +7,9 @@ class UniformSamplingReplayBuffer(ReplayBuffer):
         super().__init__(buffer_size)
         self.buffer = deque(maxlen=self.buffer_size)
     
+    def register_progress(self, agent):
+        pass
+    
     def sample_indices(self, sample_size):
         return np.random.choice(range(len(self)), size=sample_size), np.ones(shape=sample_size) / float(sample_size)
     

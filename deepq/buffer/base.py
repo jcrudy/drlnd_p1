@@ -18,6 +18,12 @@ class ReplayBuffer(with_metaclass(ABCMeta, object)):
         return len(self.buffer)
     
     @abstractmethod
+    def register_progress(self, agent):
+        '''
+        Each training episode, register the progress of the agent with the buffer.
+        '''
+    
+    @abstractmethod
     def append(self, experience):
         '''
         Append an Experience to the ReplayBuffer for later sampling.

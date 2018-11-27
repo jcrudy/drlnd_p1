@@ -2,7 +2,7 @@ from collections import namedtuple
 import numpy as np
 from .policy.epsilon_greedy import EpsilonGreedyPolicy
 from tqdm import tqdm
-from .base import numpify, rolling_mean, constant
+from .base import numpify, rolling_mean
 from infinity import inf
 from matplotlib import pyplot as plt
 import pickle
@@ -10,8 +10,6 @@ import pandas
 from six import with_metaclass
 from abc import ABCMeta, abstractmethod
 from toolz import last
-from torch import optim
-from functools import partial
 
 Experience = namedtuple("Experience", 
                         field_names=["state", "action", "reward", 
@@ -48,6 +46,25 @@ class AverageReturnThreshold(EarlyStopper):
         return False
 
 class Agent(object):
+    '''
+    Parameters
+    ==========
+    
+    model (deepq.model.base.Model): The model used to learn the state-action value 
+        function.
+    
+    replay_buffer (deepq.buffer.base.ReplayBuffer): The buffer that will be used to 
+        store and sample experience during training.
+        
+    training_policy (deepq.policy.base.Policy): The policy used to choose actions
+        during training.
+    
+    learn_every (int, >0): The number of actions to perform between learning steps.
+    
+    batch_size (int, >0): The number of experiences to sample during each learning
+        step.
+    
+    '''
     def __init__(self, model, replay_buffer, training_policy, 
                  testing_policy=EpsilonGreedyPolicy(0, 0, 0), 
                  learn_every=4, batch_size=64):
@@ -77,6 +94,19 @@ class Agent(object):
         return result
 
     def plot_train_scores(self, episodes=inf, window=100):
+        '''
+        Plot the training scores for the last episodes, including a 
+        plot of the average total reward.
+        
+        Parameters
+        ==========
+        
+        episodes (int >0 or inf): Number of episodes to include.  If inf, all episodes 
+            are included.
+            
+        window (int, >0): Number of episodes to average for the average reward plot.
+        
+        '''
         x, y = map(np.array, zip(*self.train_scores))
         rolling_y = rolling_mean(y, window)
         idx = x > (self.episodes_trained - episodes)
@@ -87,6 +117,18 @@ class Agent(object):
         plt.plot(x, rolling_y, label='Training Rolling Average Scores ({})'.format(window))
     
     def plot_test_scores(self, episodes=inf):
+        '''
+        Plot average rewards for testing simulations against number of training episodes.  
+        If no testing simulations have been performed, nothing is done.  Error bars are 
+        two standard deviations of the mean.
+        
+        Parameters
+        ==========
+        
+        episodes (int >0 or inf): Number of episodes to include.  If inf, all episodes 
+            are included.
+        
+        '''
         if not self.test_scores:
             return
         x, y = map(np.array, zip(*self.test_scores))
@@ -99,16 +141,54 @@ class Agent(object):
                      fmt='r.', ecolor='r', label='Test Scores', zorder=10)
         
     def learn(self):
+        '''
+        Sample from the replay buffer and call the model's learn method with the 
+        resulting data.
+        '''
+        # Sample from the replay buffer.
         sample_indices, sample_probs = self.replay_buffer.sample_indices(self.batch_size)
         sample = self.replay_buffer[sample_indices]
+        
+        # Convert the sample to the form required by the model.
         state, action, reward, next_state, done = map(np.array, zip(*sample))
-        self.model.learn(state, action, reward, next_state, done, sample_probs)
+        
+        # Learn from the sample.
+        error = self.model.learn(state, action, reward, next_state, done, sample_probs)
+        
+        # Inform the buffer of the errors for the sample.  Necessary for prioritized 
+        # sampling.
+        self.replay_buffer.report_errors(sample_indices, error)
         
     def train(self, environment, num_episodes=inf, validate_every=None, validation_size=10,
               save_every=None, save_path=None, early_stopper=NeverStopEarly(), plot=False,
-              plot_window=100, optimizerer=partial(optim.Adam, lr=5e-4)):
+              plot_window=100):
         '''
         Train for num_episodes episodes and return the episode scores.
+        
+        Parameters
+        ==========
+        
+        environment (deepq.environment.base.Environment): The environment on which to train.
+        
+        num_episodes (int >0 or inf): The maximum number of episodes for which to train.
+        
+        validate_every (int >0 or None): The number of episodes between validations using 
+            the testing policy.
+        
+        validation_size (int >0): The number of episodes per validation.
+        
+        save_every (int >0 or None): The number of episodes between saving the agent.
+        
+        save_path (int >0 or None): The path to which to save progress.  Will be formatted
+            with number of episodes trained.
+        
+        early_stopper (callable): A callable that accepts the agent as argument and returns
+            True if the agent should stop training early and False otherwise.
+        
+        plot (bool): If True, plot progress during training using pyplot interactive mode.
+        
+        plot_window (int >0): If plotting, window size for the average reward plot.
+        
         '''
         scores = []
         if plot:
@@ -117,7 +197,10 @@ class Agent(object):
             meangraph = plt.plot([0,1], [0,1])[0]
         
         with tqdm(total=num_episodes) as t:
-            for episode in range(num_episodes):
+            episode = 0
+            while episode < num_episodes:
+                episode += 1
+                
                 # Run validation if appropriate
                 if (
                     (validate_every is not None) and 
@@ -128,8 +211,9 @@ class Agent(object):
                 # Train for one episode
                 episode_score = self.train_episode(environment)
                 
-                # Inform the model of our progress
+                # Inform the model and buffer of our progress
                 self.model.register_progress(self)
+                self.replay_buffer.register_progress(self)
                 
                 # Record score from training episode
                 scores.append(episode_score)
@@ -175,6 +259,14 @@ class Agent(object):
         '''
         Run for num_episodes episodes under the testing policy and return 
         the episode scores.
+        
+        Parameters
+        ==========
+        
+        environment (deepq.environment.base.Environment): The environment on which to train.
+        
+        num_episodes (int >0 or inf): The maximum number of episodes for which to test.
+        
         '''
         scores = []
         with tqdm(total=num_episodes) as t:
@@ -210,7 +302,7 @@ class Agent(object):
             state = next_state
             
             # Learn from recorded experiences.
-            if self.t % self.learn_every == 0:
+            if self.t % self.learn_every == 0 and len(self.replay_buffer) >= self.batch_size:
                 self.learn()
                 
             action_count += 1
@@ -246,39 +338,3 @@ class Agent(object):
         self.test_episode_lengths.append(action_count)
         self.test_scores.append((self.episodes_trained, episode_score))
         return episode_score
-    
-
-    
-        
-# class FixedSizeReplayBuffer(ReplayBuffer):
-#     def __init__(self, action_size, buffer_size):
-#         super().__init__(action_size=action_size)
-#         self.buffer_size = buffer_size
-#         self.buffer = deque(maxlen=self.buffer_size)
-# 
-#     def append(self, experience):
-#         self.buffer.append(experience)
-#     
-#     def __getitem__(self, indices):
-#         return tuple(self.buffer[idx] for idx in indices)
-
-
-
-# class PrioritySamplingReplayBuffer(ReplayBuffer):
-#     def __init__(self, action_size, buffer_size, ):
-
-# class PrioritySamplingReplayBuffer(ReplayBuffer):
-#     def __init__(self, ):
-
-# class BasicReplayBuffer(FixedSizeReplayBuffer, UniformSamplingReplayBuffer):
-#     pass
-    
-    
-
-
-
-
-
-
-
-

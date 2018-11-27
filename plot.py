@@ -22,7 +22,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Train a deep Q network')
     parser.add_argument('-m', metavar='<model_path>', 
                         help='The path of the model file.',
-                        required=True)
+                        default='banana_agent.pkl')
     parser.add_argument('-e', metavar='<num_episodes>', type=int,
                         help='The number of episodes to plot.',
                         default=inf)

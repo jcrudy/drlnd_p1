@@ -7,7 +7,7 @@ This repository is a submission for the navigation project of Udacity's deep rei
 Project Details
 ---------------
 
-The assignment is to solve the Unity bananas environment, which consists of a cart that drives around a field collecting bananas by running them over.  The field has both yellow and blue bananas.  Yellow bananas yield a reward of 1 while blue bananas yield a reward of -1.  The environment is considered solved when an agent achieves an average return of 13 or more over 100 episodes of 300 actions each.  Actions are left or right turns and moves forward or backward.  The state is a 37 dimensional vector.  I solved the environment with an implementation of deep Q-learning.
+The assignment is to solve the Unity bananas environment, which consists of a cart that drives around a field collecting bananas by running them over.  The field has both yellow and blue bananas.  Yellow bananas yield a reward of 1 while blue bananas yield a reward of -1.  The environment is considered solved when an agent achieves an average return of 13 or more over 100 episodes of 300 actions each.  Actions are left and right turns and moves forward and backward.  The state is a 37 dimensional vector.  I solved the environment with an implementation of deep Q-learning.
 
 
 Getting Started
@@ -22,7 +22,7 @@ activated by:
 
     source activate drlnd_p1
 
-Next, you can run the project's limited unit test by running:
+Next, you can run the project's limited unit tests by running:
 
     nosetests
 

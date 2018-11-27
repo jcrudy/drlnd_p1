@@ -1,5 +1,6 @@
 from deepq.environment.unity_adapter import BananaEnvironment
 from deepq.model.fixed_q_target import FixedQTargetModel
+from deepq.model.double_dqn import DoubleDQNModel
 from deepq.agent import Agent, AverageReturnThreshold
 from deepq.buffer.uniform_sampling import UniformSamplingReplayBuffer
 from deepq.buffer.prioritized_replay import PrioritizedReplayBuffer
@@ -20,6 +21,8 @@ def main(args):
     validation_episodes = args.e
     save_every = args.s
     save_filename = args.f
+    window_size = args.w
+    threshold = args.t
     
     # Create the training environment
     environment = BananaEnvironment()
@@ -28,7 +31,7 @@ def main(args):
     try:
         agent = Agent.from_pickle(model_path)
     except FileNotFoundError:
-        hidden_size = 100
+        hidden_size = 75
         buffer_size = 10000
         network = Network(state_size=environment.state_size, 
                           n_actions=environment.n_actions,
@@ -38,17 +41,18 @@ def main(args):
                           activations=(compose(nn.Dropout(.2), F.relu), 
                                        compose(nn.Dropout(.2), F.relu), 
                                        identity))
-        model = FixedQTargetModel(network, 
-                                  optimizerer=optim.Adam,
-                                  schedulerer=partial(optim.lr_scheduler.ReduceLROnPlateau, 
-                                                      mode='max',
-                                                      patience=20,
-                                                      verbose=True,
-                                                      ),
-                                  tau=1.)
-        buffer = UniformSamplingReplayBuffer(buffer_size)
-#         buffer = PrioritizedReplayBuffer(buffer_size)
-        training_policy = EpsilonGreedyPolicy(1., .995, .01)
+        model = DoubleDQNModel(network, 
+                               optimizerer=optim.Adam,
+                               schedulerer=partial(optim.lr_scheduler.ReduceLROnPlateau, 
+                                                   mode='max',
+                                                   patience=20,
+                                                   verbose=True,
+                                                   ),
+                               tau=1.)
+        
+#         buffer = UniformSamplingReplayBuffer(buffer_size)
+        buffer = PrioritizedReplayBuffer(buffer_size)
+        training_policy = EpsilonGreedyPolicy(1., .98, .01)
         agent = Agent(model=model, replay_buffer=buffer, 
                   training_policy=training_policy,
                   batch_size=128)
@@ -57,8 +61,8 @@ def main(args):
     agent.train(environment, num_episodes, validate_every=validate_every,
                 validation_size=validation_episodes, save_every=save_every,
                 save_path=save_filename, 
-                early_stopper=AverageReturnThreshold(threshold=13., episodes=100),
-                plot=True)
+                early_stopper=AverageReturnThreshold(threshold=threshold, episodes=window_size),
+                plot=True, plot_window=window_size)
     
     # Save trained agent to disk
     agent.to_pickle(model_path)
@@ -68,7 +72,8 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Train a deep Q network')
     parser.add_argument('-m', metavar='<model_path>', 
-                        help='The path of the model file.', required=True)
+                        help='The path of the model file.', 
+                        default='banana_agent.pkl')
     parser.add_argument('-n', metavar='<num_episodes>', type=int,
                         help='The number of episodes for which to train.',
                         default=1000)
@@ -84,6 +89,12 @@ if __name__ == '__main__':
     parser.add_argument('-f', metavar='<save_filename>',
                         help='Filename for saving intermediate results.  Will be formatted with number of episodes before saving.',
                         default=None)
+    parser.add_argument('-t', metavar='<stopping_threshold>',
+                        help='Stop training after an average reward of this much per episode is achieved.',
+                        type=int, default=13)
+    parser.add_argument('-w', metavar='<stopping_window>',
+                        help='Window size to use for reward averaging for early stopping and plotting..',
+                        type=int, default=100)
     
     args = parser.parse_args()
     

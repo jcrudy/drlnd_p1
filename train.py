@@ -52,7 +52,7 @@ def main(args):
         
 #         buffer = UniformSamplingReplayBuffer(buffer_size)
         buffer = PrioritizedReplayBuffer(buffer_size)
-        training_policy = EpsilonGreedyPolicy(1., .98, .01)
+        training_policy = EpsilonGreedyPolicy(1., .95, .005)
         agent = Agent(model=model, replay_buffer=buffer, 
                   training_policy=training_policy,
                   batch_size=128)

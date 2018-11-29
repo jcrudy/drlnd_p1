@@ -108,7 +108,7 @@ class DoubleNetworkModel(Model):
         prediction = self.q_local.forward(torchify32(state)).gather(1, torchify(action).unsqueeze(1))
         
         # Compute the weighted loss
-        weight_ = torchify32(weight).unsqueeze(1)
+        weight_ = torchify32(weight).unsqueeze(1).detach()
         loss = F.mse_loss(weight_ * prediction, weight_ * target)
         
         # Perform an optimizer step
@@ -121,9 +121,7 @@ class DoubleNetworkModel(Model):
         
         # A second prediction after the model parameters have been adjusted
         # in order to make better decisions about future sampling.
-        after_prediction = self.q_local.forward(torchify32(state)).detach().gather(1, torchify(action).unsqueeze(1))
-        
-        return numpify((target - after_prediction).squeeze())
+        return numpify((target - prediction).squeeze())
     
     def register_progress(self, agent):
         if len(agent.train_scores) > self.window:

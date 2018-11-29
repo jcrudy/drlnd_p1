@@ -32,9 +32,11 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         return np.array(list(map(first, self.buffer)))
 
     def sample_indices(self, sample_size):
-        weights = (self.weights() / self.total_weight)
+        weights = self.weights()
         sample = weighted_choice(sample_size, weights)
-        return sample, (1. / weights[sample]) ** (self.b)
+        coefs = (1. / weights[sample]) ** (self.b / 2.)
+        coefs /= np.max(coefs)
+        return sample, coefs
     
     def report_errors(self, indices, errors):
         for i, index in enumerate(indices):

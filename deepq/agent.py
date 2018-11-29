@@ -146,14 +146,14 @@ class Agent(object):
         resulting data.
         '''
         # Sample from the replay buffer.
-        sample_indices, sample_probs = self.replay_buffer.sample_indices(self.batch_size)
+        sample_indices, weights = self.replay_buffer.sample_indices(self.batch_size)
         sample = self.replay_buffer[sample_indices]
         
         # Convert the sample to the form required by the model.
         state, action, reward, next_state, done = map(np.array, zip(*sample))
         
         # Learn from the sample.
-        error = self.model.learn(state, action, reward, next_state, done, sample_probs)
+        error = self.model.learn(state, action, reward, next_state, done, weights)
         
         # Inform the buffer of the errors for the sample.  Necessary for prioritized 
         # sampling.

@@ -92,7 +92,10 @@ class Agent(object):
         if not isinstance(result, cls):
             raise TypeError('Unpickled object is not correct type.')
         return result
-
+    
+    def save_weights(self, filename):
+        self.model.save_weights(filename)
+    
     def plot_train_scores(self, episodes=inf, window=100):
         '''
         Plot the training scores for the last episodes, including a 

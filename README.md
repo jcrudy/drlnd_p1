@@ -21,6 +21,21 @@ from the repositories root directory.  This will create the drlnd_p1 environment
 activated by:
 
     source activate drlnd_p1
+    
+The drlnd_p1 environment contains the following packages installed via conda:
+
+    - nose=1.3.7
+    - numpy=1.14.5
+    - matplotlib=3.0.2
+    - pytorch=0.4.0
+    - protobuf=3.5.2
+    - toolz=0.9.0
+    - multipledispatch=0.6.0
+    - infinity=1.4
+    - six=1.11.0
+
+Packages `gym` and `mlagents` are also installed via pip from their respective github repositories.  See environment.yml for details. 
+    
 
 Next, you can run the project's limited unit tests by running:
 
@@ -32,5 +47,10 @@ The project should download and extract the bananas environment automatically.  
 Instructions
 ------------
 
-Once the above environment has been installed and activated and the tests pass, a new agent can be created and trained by running train.py.
+Once the above environment has been installed and activated and the tests pass, a new agent can be created and trained by running train.py:
+
+    python train.py
+
+The train.py script will train a new agent and, by default, save that agent as banana_agent.pkl.  A plot of episode rewards will be displayed during training, and training will stop as soon as an average reward of 13 or more over 100 episodes has been achieved.
+ 
     

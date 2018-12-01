@@ -28,7 +28,7 @@ def main(args):
 if __name__ == '__main__':
     import argparse
     
-    parser = argparse.ArgumentParser(description='Train a deep Q network')
+    parser = argparse.ArgumentParser(description='Plot the past rewards of a trained agent.')
     parser.add_argument('-m', metavar='<model_path>', 
                         help='The path of the model file.',
                         default='banana_agent.pkl')

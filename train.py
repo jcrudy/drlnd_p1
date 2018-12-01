@@ -23,6 +23,7 @@ def main(args):
     save_filename = args.f
     window_size = args.w
     threshold = args.t
+    weights_path = args.u
     
     # Create the training environment
     environment = BananaEnvironment()
@@ -67,6 +68,9 @@ def main(args):
     # Save trained agent to disk
     agent.to_pickle(model_path)
     
+    if weights_path is not None:
+        agent.save_weights(weights_path)
+    
 if __name__ == '__main__':
     import argparse
     
@@ -95,6 +99,9 @@ if __name__ == '__main__':
     parser.add_argument('-w', metavar='<stopping_window>',
                         help='Window size to use for reward averaging for early stopping and plotting..',
                         type=int, default=100)
+    parser.add_argument('-u', metavar='<weights_path>',
+                        help='Path to save weights after training.',
+                        default=None)
     
     args = parser.parse_args()
     

@@ -7,6 +7,7 @@ import torch.optim as optim
 from ..base import torchify, torchify32, numpify, constant
 from toolz import last
 import numpy as np
+import torch
 
 class Model(with_metaclass(ABCMeta, object)):
     @abstractmethod
@@ -50,7 +51,13 @@ class Model(with_metaclass(ABCMeta, object)):
         Inform the model about progress by the agent.  Should be called by the agent
         after each call to learn.  Allows the model to adjust learning parameters.
         '''
-
+    
+    @abstractmethod
+    def save_weights(self, filename):
+        '''
+        Save just the prediction weights of the model.
+        '''
+    
 class DoubleNetworkModel(Model):
     '''
     A model that uses two networks with the same architecture, one of which lags 
@@ -90,6 +97,9 @@ class DoubleNetworkModel(Model):
         self.gamma = gamma
         self.tau = tau
         self.window = window
+    
+    def save_weights(self, filename):
+        torch.save(self.q_local.state_dict(), filename)
     
     def evaluate(self, state):
         return self.q_local.forward(torchify32(state))
